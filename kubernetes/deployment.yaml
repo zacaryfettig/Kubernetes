@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextcloud-deployment
+  labels:
+    app: nextcloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextcloud
+  template:
+    metadata:
+      labels:
+        app: nextcloud
+    spec:
+      containers:
+      - name: nextcloud
+        image: nextcloud
+        ports:
+        - containerPort: 80
+      volumes:
+        - name: persistent-storage
+          persistentVolumeClaim:
+            claimName: s3-claim
+      env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: nextcloud-secret
+              key: postgresUser
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: nextcloud-secret
+              key: postgresPassword
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: nextcloud-secret
+              key: postgresDb
+        - name: NEXTCLOUD_ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              name: nextcloud-secret
+              key: nextcloudUser
+        - name: NEXTCLOUD_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: nextcloud-secret
+              key: nextcloudPassword
+        - name: POSTGRES_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-db-config-map
+              key: database_url
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: nextcloudservice
+spec:
+  selector:
+    app: nextcloud
+  type: LoadBalancer
+  ports:
+  - protocol: TCP
+    targetPort: 80
+    port: 80
+    nodePort: 30000
